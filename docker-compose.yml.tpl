@@ -11,6 +11,7 @@ services:
     - /tmp/
     volumes:
     - ./application-ldap.yml:/application-ldap.yml
+    - ./application-keycloak.yml:/application-keycloak.yml
 
   nginx:
     image: nginx:1.13-alpine
