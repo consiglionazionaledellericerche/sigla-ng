@@ -5,4 +5,4 @@ keycloak:
     ssl-required: NONE
     credentials:
         secret: secret
-    public-client: true
+    public-client: false
