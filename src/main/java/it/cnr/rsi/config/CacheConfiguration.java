@@ -109,7 +109,6 @@ public class CacheConfiguration {
 
         config.getMapConfigs().put("default", initializeDefaultMapConfig());
         config.getMapConfigs().put("it.cnr.rsi.domain.*", initializeDomainMapConfig());
-        config.getMapConfigs().put("clustered-http-sessions", initializeClusteredSession());
 
         log.info("HAZELCAST JOIN CONFIG {}", config.getNetworkConfig().getJoin());
 
@@ -152,26 +151,6 @@ public class CacheConfiguration {
         mapConfig.setTimeToLiveSeconds(hazelcastConfigurationProperties.getTimeToLiveSeconds());
         return mapConfig;
     }
-
-
-    private MapConfig initializeClusteredSession() {
-        MapConfig mapConfig = new MapConfig();
-        mapConfig.setBackupCount(hazelcastConfigurationProperties.getBackupCount());
-        mapConfig.setTimeToLiveSeconds(hazelcastConfigurationProperties.getTimeToLiveSeconds());
-        return mapConfig;
-    }
-
-
-    /**
-     * Use by Spring Security, to get events from Hazelcast.
-     *
-     * @return the session registry
-     */
-    @Bean
-    public SessionRegistry sessionRegistry() {
-        return new SessionRegistryImpl();
-    }
-
 
     // A cron expression to define every day at midnight
     @Scheduled(cron ="0 0 * * * *")
