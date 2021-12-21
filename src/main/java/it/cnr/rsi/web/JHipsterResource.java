@@ -22,6 +22,10 @@ import it.cnr.rsi.security.ContextAuthentication;
 import it.cnr.rsi.security.UserContext;
 import it.cnr.rsi.service.UtenteService;
 import it.cnr.rsi.web.rest.errors.InvalidPasswordException;
+import org.keycloak.KeycloakPrincipal;
+import org.keycloak.adapters.OidcKeycloakAccount;
+import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
+import org.keycloak.representations.IDToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +38,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -94,25 +99,46 @@ public class JHipsterResource {
     	LOGGER.info("get account");
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         LOGGER.info("get account with authentication {}", authentication);
-        return ResponseEntity.ok(
-            Optional
+        final Optional<KeycloakAuthenticationToken> keycloakAuthenticationToken = Optional.ofNullable(authentication)
+            .filter(KeycloakAuthenticationToken.class::isInstance)
+            .map(KeycloakAuthenticationToken.class::cast);
+        Optional<UserContext> userContext = Optional.empty();
+        if (keycloakAuthenticationToken.isPresent()) {
+            final OidcKeycloakAccount account = keycloakAuthenticationToken.get().getAccount();
+            LOGGER.info("get account with authentication {}", account);
+            final Principal principal = account.getPrincipal();
+            if (principal instanceof KeycloakPrincipal) {
+                KeycloakPrincipal kPrincipal = (KeycloakPrincipal) principal;
+                IDToken token = kPrincipal.getKeycloakSecurityContext().getIdToken();
+                final Optional<Utente> optionalUtente = utenteService.findUsersForUid(token.getPreferredUsername()).stream().findAny();
+                if (optionalUtente.isPresent()) {
+                    userContext = Optional.of(new UserContext(optionalUtente.get()));
+                } else {
+                    return ResponseEntity.unprocessableEntity().build();
+                }
+            }
+        } else {
+            userContext = Optional
                 .ofNullable(authentication)
                 .map(Authentication::getPrincipal)
                 .filter(UserContext.class::isInstance)
-                .map(UserContext.class::cast)
-                .map(userContext -> {
+                .map(UserContext.class::cast);
+        }
+        return ResponseEntity.ok(
+            userContext
+                .map(s -> {
                     final Optional<List<Utente>> usersForUid = Optional.ofNullable(
-                        utenteService.findUsersForUid(userContext.getLogin())).filter(utentes -> !utentes.isEmpty());
+                        utenteService.findUsersForUid(s.getLogin())).filter(utentes -> !utentes.isEmpty());
                     if (usersForUid.isPresent()) {
-                        userContext.users(usersForUid.get()
+                        s.users(usersForUid.get()
                             .stream()
                             .map(utente -> new UserContext(utente))
                             .collect(Collectors.toList()));
                     } else {
-                        userContext.users(Collections.singletonList(utenteService.loadUserByUsername(userContext.getLogin())));
+                        s.users(Collections.singletonList(utenteService.loadUserByUsername(s.getLogin())));
                     }
-                    SecurityContextHolder.getContext().setAuthentication(new ContextAuthentication(userContext));
-                    return userContext;
+                    SecurityContextHolder.getContext().setAuthentication(new ContextAuthentication(s));
+                    return s;
                 })
                 .orElse(null)
         );
