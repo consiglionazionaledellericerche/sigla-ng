@@ -46,13 +46,12 @@ export class HomeComponent implements OnInit, AfterViewInit {
     }
 
     ngOnInit() {
-        if (this.isAuthenticated()) {
-            this.principal.identity().then((account) => {
-                this.account = account;
-            });
-        }
+        this.principal.identity().then((account) => {
+            this.account = account;
+        });
         this.registerAuthenticationSuccess();
     }
+
     ngAfterViewInit() {
         setTimeout(() => this.userNameElement.nativeElement.focus());
     }
