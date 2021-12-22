@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -51,8 +52,11 @@ public class KeycloakConfiguration extends KeycloakWebSecurityConfigurerAdapter 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         super.configure(http);
-        http.authorizeRequests()
+        http.cors().and().authorizeRequests()
+            .antMatchers(HttpMethod.OPTIONS).permitAll()
             .antMatchers("/api/profile-info").permitAll()
-            .antMatchers("/**").fullyAuthenticated();
+            .antMatchers("/api/**").authenticated()
+            .anyRequest().permitAll();
+        http.csrf().disable();
     }
 }
