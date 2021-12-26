@@ -18,7 +18,7 @@ export class AuthExpiredInterceptor extends JhiHttpInterceptor {
     responseIntercept(observable: Observable<Response>): Observable<Response> {
         const self = this;
         return <Observable<Response>> observable.catch((error) => {
-            if (error.status === 401 && error.text() !== '') {
+            if (error.status === 401 || error.status === 403 && error.text() !== '') {
                 const loginService: LoginService = self.injector.get(LoginService);
                 const destination = this.stateStorageService.getDestinationState();
                 if (destination) {

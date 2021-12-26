@@ -1,5 +1,6 @@
 package it.cnr.rsi.config;
 
+import it.cnr.rsi.security.AjaxLogoutSuccessHandler;
 import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;
 import org.keycloak.adapters.springsecurity.KeycloakSecurityComponents;
 import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationProvider;
@@ -14,20 +15,33 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.web.filter.CorsFilter;
 
 @Configuration
 @EnableWebSecurity
 @ConditionalOnProperty("keycloak.auth-server-url")
 @ComponentScan(basePackageClasses = KeycloakSecurityComponents.class)
 public class KeycloakConfiguration extends KeycloakWebSecurityConfigurerAdapter {
-    public static final String SAVED_LOGIN_ORIGIN_URI = KeycloakConfiguration.class.getName() + "_SAVED_ORIGIN";
-
     private final Logger log = LoggerFactory.getLogger(KeycloakConfiguration.class);
+
+    private final CorsFilter corsFilter;
+
+    public KeycloakConfiguration(CorsFilter corsFilter) {
+        this.corsFilter = corsFilter;
+    }
+
+    @Bean
+    public AjaxLogoutSuccessHandler ajaxLogoutSuccessHandler() {
+        return new AjaxLogoutSuccessHandler();
+    }
 
     @Autowired
     public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
@@ -50,13 +64,40 @@ public class KeycloakConfiguration extends KeycloakWebSecurityConfigurerAdapter 
     }
 
     @Override
+    public void configure(WebSecurity web) throws Exception {
+        web.ignoring()
+            .antMatchers(HttpMethod.OPTIONS, "/**")
+            .antMatchers("/app/**/*.{js,html}")
+            .antMatchers("/i18n/**")
+            .antMatchers("/content/**")
+            .antMatchers("/h2-console/**")
+            .antMatchers("/swagger-ui/index.html")
+            .antMatchers("/test/**");
+    }
+
+    @Override
     protected void configure(HttpSecurity http) throws Exception {
-        super.configure(http);
-        http.cors().and().authorizeRequests()
-            .antMatchers(HttpMethod.OPTIONS).permitAll()
+        http
+            .csrf()
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            .and()
+            .addFilterBefore(corsFilter, CsrfFilter.class)
+            .exceptionHandling()
+            .and()
+            .logout()
+            .logoutUrl("/api/logout")
+            .logoutSuccessHandler(ajaxLogoutSuccessHandler())
+            .permitAll()
+            .and()
+            .headers()
+            .frameOptions()
+            .disable()
+            .and()
+            .authorizeRequests()
             .antMatchers("/api/profile-info").permitAll()
             .antMatchers("/api/**").authenticated()
-            .anyRequest().permitAll();
-        http.csrf().disable();
+            .antMatchers("/management/health").permitAll()
+            .antMatchers("/management/info").permitAll()
+            .antMatchers("/management/**").hasAuthority("ROLE_ADMIN");
     }
 }

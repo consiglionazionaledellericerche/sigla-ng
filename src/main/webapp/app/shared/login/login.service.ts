@@ -19,7 +19,7 @@ export class LoginService {
         private contextService: ContextService
     ) {}
 
-    login(credentials, callback?) {
+    login(credentials?, callback?) {
         const cb = callback || function() {};
         return new Promise((resolve, reject) => {
             this.authServerProvider.login(credentials).subscribe((data) => {
