@@ -6,9 +6,9 @@ keycloak:
     credentials:
         secret: secret
     public-client: true
-    use-resource-role-mappings: true 
-    cors: true 
+    use-resource-role-mappings: true
+    cors: true
     cors-max-age: 0
-    principal-attribute: preferred_username 
-    cors-allowed-methods: POST, PUT, DELETE, GET 
-    cors-allowed-headers: X-Requested-With, Content-Type, Authorization, Origin, Accept, Access-Control-Request-Method, Access-Control-Request-Headers
+    principal-attribute: preferred_username
+    cors-allowed-methods: POST, PUT, DELETE, GET
+    cors-allowed-headers: X-Requested-With, Content-Type, Authorization, Origin, Accept, Access-Control-Allow-Origin, Access-Control-Request-Method, Access-Control-Request-Headers
